@@ -1,0 +1,184 @@
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options 
+#from selenium.webdriver.support.select import Select
+from selenium.webdriver.support.ui import Select
+#from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+import csv
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+%matplotlib inline
+import time
+import scrapy
+
+
+# Step 1- Working with Selenium
+
+
+driver=webdriver.Chrome("C:/Users/aschlee/Desktop/AlexSchlee/2020/Weiterbildung/Own Data Science Projects/#6 KNN/chromedriver")
+driver.get('https://www.google.com/')
+driver.find_element_by_class_name('gLFyf').send_keys('imdb', Keys.RETURN)
+time.sleep(1)
+
+#IMBD Google Search Result click
+driver.find_element_by_class_name('LC20lb').click()
+time.sleep(1)
+
+#click on dropdown
+driver.find_element_by_class_name('ipc-icon--arrow-drop-down').click()
+time.sleep(1)
+
+#Mouse Hover Over
+element=driver.find_element_by_link_text('Advanced Search')
+hover=ActionChains(driver).move_to_element(element)
+hover.perform()
+time.sleep(1)
+element.click()
+
+#Click on advanced search
+driver.find_element_by_link_text('Advanced Title Search').click()
+time.sleep(1)
+
+#Select Feature Film
+driver.find_element_by_xpath('//div[@class="clause"][2]/div[@class="inputs"]/table/tbody/tr/td/label').click()
+time.sleep(1)
+
+#Select TV Movie
+driver.find_element_by_xpath('//div[@class="clause"][2]/div[@class="inputs"]/table/tbody/tr/td[2]/label[@for="title_type-2"]').click()
+time.sleep(1)
+
+#Release date min
+driver.find_element_by_xpath('//input[@name="release_date-min"]').click()
+time.sleep(1)
+driver.find_element_by_xpath('//input[@name="release_date-min"]').send_keys('1990')
+time.sleep(1)
+
+#Release date max
+driver.find_element_by_xpath('//input[@name="release_date-max"]').click()
+time.sleep(1)
+driver.find_element_by_xpath('//input[@name="release_date-max"]').send_keys('2020')
+time.sleep(1)
+
+#click on dropdown- select Rating 1.0
+driver.find_element_by_xpath('//select[@name="user_rating-min"]').click()
+time.sleep(1)
+dropdown=Select(driver.find_element_by_xpath('//select[@name="user_rating-min"]'))
+dropdown.select_by_visible_text('1.0')
+time.sleep(1)
+
+#click on dropdown- select Rating 10
+driver.find_element_by_xpath('//select[@name="user_rating-max"]').click()
+time.sleep(1)
+dropdown=Select(driver.find_element_by_xpath('//select[@name="user_rating-max"]'))
+dropdown.select_by_visible_text('10')
+time.sleep(1)
+
+#Oscar Nominated
+driver.find_element_by_xpath('//input[@value="oscar_nominees"]').click()
+
+#Movies in Color
+driver.find_element_by_xpath('//label[@for="colors-1"]').click()
+time.sleep(1)
+
+#Select english language
+dropdown2=Select(driver.find_element_by_xpath('//select[@class="languages"]'))
+dropdown2.select_by_index(72)
+time.sleep(2)
+
+#click submit button
+driver.find_element_by_xpath('//button[@class="primary"]').click()
+time.sleep(1)
+
+#current URL
+current_url=driver.current_url
+print(current_url)
+
+
+#Step 2- Working with Scrapy
+
+import scrapy
+import requests
+import scrapy.crawler as crawler
+from scrapy.linkextractors import LinkExtractor
+from scrapy.utils.project import get_project_settings
+from scrapy import Spider
+from scrapy.selector import Selector
+from scrapy.http import Request
+from multiprocessing import Process, Queue
+from twisted.internet import reactor
+from scrapy import signals
+from scrapy.crawler import CrawlerProcess
+from scrapy.spiders import CrawlSpider, Rule
+from importlib import import_module
+import csv
+from scrapy.utils.project import get_project_settings
+from scrapy.xlib.pydispatch import dispatcher
+from crochet import setup
+setup()
+
+
+class BestMovies(CrawlSpider):
+    name = 'selected_movies'
+    allowed_domains = ['imdb.com']
+    start_urls = [current_url]
+
+    #create csv file
+    #def __init__(self):
+    #    self.outfile = open("output1222.csv", "w", newline="")
+    #    self.writer = csv.writer(self.outfile)
+    #    self.writer.writerow(['title', 'year', 'rating', 'rating_count', 'genre'])
+       # self.csvfile=open('test12.csv', 'w+', newline='')
+       # self.writer=csv.writer(self.csvfile)
+       # self.writer.writerow(['title', 'year', 'rating', 'rating_count', 'genre'])
+
+    rules = (
+        Rule(LinkExtractor(restrict_xpaths="//h3[@class='lister-item-header']/a"), callback='parse_item', follow=True),
+        Rule(LinkExtractor(restrict_xpaths="//a[@class='lister-page-next next-page']"))
+    )
+    
+    def parse_item(self,response):
+       # self.csv_File9=open('File1.csv', 'w+', newline='')
+      
+        title= response.xpath("//div[@class='title_wrapper']/h1/text()").get()   
+        year=response.xpath("//div[@class='title_wrapper']/h1/span/a/text()").get()
+        rating=response.xpath("//span[@itemprop='ratingValue']/text()").get()
+        rating_count=response.xpath("//span[@itemprop='ratingCount']/text()").get()
+        genre=response.xpath("//div[@class='subtext']/a/text()").getall()
+
+        #writer.writerow([title,year,rating,rating_count,genre])
+        #writer = csv.writer(self.outfile)
+        #writer.writerow([title,year,rating,rating_count,genre])
+
+        yield {
+            'title': title,
+            'year': year,
+            'rating': rating,
+            'rating_count': rating_count,
+            'genre': genre
+            }
+     
+        #try:
+       #     self.writer=csv.writer(self.csv_File9)
+       #     self.writer.writerow(['title', 'year', 'rating', 'rating_count', 'genre'])
+            #self.writer.writerow((title,year,rating,rating_count,genre))
+
+        #finally:
+         #   self.csv_File9.close()
+process = CrawlerProcess({
+"User Agent": 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0',
+'FEED_FORMAT': 'csv',
+'FEED_URI': 'C:\\Users\\aschlee\\Desktop\\AlexSchlee\\2020\\Weiterbildung\\Own Data Science Projects\\#6 KNN\\FileX.csv'
+})
+
+process.crawl(BestMovies)
+process.start(stop_after_crawl=False) 
+
+
+
+
+
+
